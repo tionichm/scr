@@ -15,7 +15,7 @@ class Snake_Searcher:
                 chi-squared test becomes unreliable.
 
     """
-    def __init__(self, *data_list, length=10, start=0, chi_tol=0.95,
+    def __init__(self, *data_list, length=10, start=0, chi_tol=0.9995,
                  verbose=True):
         length_trigger = bool
         self.log = Print_Log(verbose)
@@ -146,16 +146,13 @@ class Snake_Searcher:
     def SS_output(self):
         return self.output
 
-
 class Data_Chomper:
     def __init__(self, grouped_data, verbose=True):
         self.log = Print_Log(verbose)
         self.log.print_it("*** DATA CHOMPER ***")
         self.log.print_it("DC: Initialising Data_Chomper.")
         self.input = grouped_data
-        self.builder = []
-        self.output = []
-        self.points = []
+        self.output = {}
         self.log.print_it("DC: Executing main function.")
         self.main_loop()
 
@@ -164,88 +161,93 @@ class Data_Chomper:
             self.log.print_it("DC: Data identified as dictionary.")
             for key in self.input.keys():
                 self.log.print_it("DC: Packing data in dictionary key ", key)
-                self.pack_groups(self.input[key])
+                self.pack_groups(self.input[key], key)
         if type(self.input) == list:
             self.log.print_it("DC: Data identified as list.")
             listnumber = 1
             for data in self.input:
-                self.log.print_it("DC: Packing list number", listnumber)
+                self.log.print_it("DC: Packing list number", listnumber,
+                                  listnumber)
                 self.pack_groups(data)
                 listnumber += 1
 
-    def pack_groups(self, data):
-        for grp_no in range(len(data)):
-            if grp_no == 0:
-                current_grp = np.array(data[grp_no])
-                next_grp = np.array(data[grp_no + 1])
-                cond = (np.average(current_grp) - np.average(next_grp)) < 15
-                if cond:
-                    self.builder.append(current_grp)
-                    self.builder.append(next_grp)
-                else:
-                    self.output.append(self.current_grp)
-            elif grp_no < len(data) - 1:
-                current_grp = np.array(data[grp_no])
-                next_grp = np.array(data[grp_no + 1])
-                cond = (abs(np.average(current_grp) -
-                            np.average(next_grp)) < 15)
-                if cond:
-                    self.builder.append(next_grp)
-                else:
-                    if len(self.builder) == 0:
-                        pass
-                    else:
-                        self.output.append(self.builder)
-                        self.builder = []
-            else:
-                current_grp = np.array(data[grp_no])
-                prev_grp = np.array(data[grp_no - 1])
-                cond = (abs(np.average(current_grp) -
-                            np.average(prev_grp)) < 15)
-                if cond:
-                    self.builder.append(current_grp)
-                    self.output.append(self.builder)
-                else:
-                    self.output.append(self.builder)
-                    self.output.append(current_grp)
-        for sets in self.output:
-            lists = np.array([j for i in sets for j in i])
-            self.points.append((np.average(lists), np.std(lists),
-                                len(lists)))
-
-    def DC_output(self):
-        return self.points
-
-
-class Rebuilder:
-    def __init__(self, reservoir, sample):
-        self.reservoir = reservoir
-        self.sample = sample
-        self.r_start = 0
-        self.startlist = []
-        self.linklist = []
-        self.outlist = []
-
-    def rebuildit(self):
-        for sdata in self.sample:
-            for rdata in self.reservoir:
-                if ((abs(sdata[0] - rdata[0]) < 15) and
-                        (self.reservoir.index(rdata) >= self.r_start)):
-                    self.r_start = self.reservoir.index(rdata)
-                    self.startlist.append(self.r_start)
-                    self.linklist.append((sdata[0], rdata[0]))
-
-                    break
-        c = 0
-        for val in range(len(self.reservoir)):
-            if val in self.startlist:
-                self.outlist.append(self.linklist[c])
-                c += 1
-            else:
-                self.outlist.append(self.reservoir[val][0])
-
-    def give_data(self):
-        return self.outlist
+    def pack_groups(self, data, index):
+        self.output[index] = []
+        for array in data:
+            self.output[index].append((np.average(array), np.std(array), len(array)))
+#     def pack_groups(self, data):
+#         for grp_no in range(len(data)):
+#             if grp_no == 0:
+#                 current_grp = np.array(data[grp_no])
+#                 next_grp = np.array(data[grp_no + 1])
+#                 cond = (np.average(current_grp) - np.average(next_grp)) < 15
+#                 if cond:
+#                     self.builder.append(current_grp)
+#                     self.builder.append(next_grp)
+#                 else:
+#                     self.output.append(self.current_grp)
+#             elif grp_no < len(data) - 1:
+#                 current_grp = np.array(data[grp_no])
+#                 next_grp = np.array(data[grp_no + 1])
+#                 cond = (abs(np.average(current_grp) -
+#                             np.average(next_grp)) < 15)
+#                 if cond:
+#                     self.builder.append(next_grp)
+#                 else:
+#                     if len(self.builder) == 0:
+#                         pass
+#                     else:
+#                         self.output.append(self.builder)
+#                         self.builder = []
+#             else:
+#                 current_grp = np.array(data[grp_no])
+#                 prev_grp = np.array(data[grp_no - 1])
+#                 cond = (abs(np.average(current_grp) -
+#                             np.average(prev_grp)) < 15)
+#                 if cond:
+#                     self.builder.append(current_grp)
+#                     self.output.append(self.builder)
+#                 else:
+#                     self.output.append(self.builder)
+#                     self.output.append(current_grp)
+#         for sets in self.output:
+#             lists = np.array([j for i in sets for j in i])
+#             self.points.append((np.average(lists), np.std(lists),
+#                                 len(lists)))
+#
+#     def DC_output(self):
+#         return self.points
+#
+#
+# class Rebuilder:
+#     def __init__(self, reservoir, sample):
+#         self.reservoir = reservoir
+#         self.sample = sample
+#         self.r_start = 0
+#         self.startlist = []
+#         self.linklist = []
+#         self.outlist = []
+#
+#     def rebuildit(self):
+#         for sdata in self.sample:
+#             for rdata in self.reservoir:
+#                 if ((abs(sdata[0] - rdata[0]) < 15) and
+#                         (self.reservoir.index(rdata) >= self.r_start)):
+#                     self.r_start = self.reservoir.index(rdata)
+#                     self.startlist.append(self.r_start)
+#                     self.linklist.append((sdata[0], rdata[0]))
+#
+#                     break
+#         c = 0
+#         for val in range(len(self.reservoir)):
+#             if val in self.startlist:
+#                 self.outlist.append(self.linklist[c])
+#                 c += 1
+#             else:
+#                 self.outlist.append(self.reservoir[val][0])
+#
+#     def give_data(self):
+#         return self.outlist
 
 class Print_Log:
     def __init__(self, verbose=False):
